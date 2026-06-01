@@ -18,6 +18,109 @@ app.command("/vjs-ping", async ({ command, ack, respond }) => {
 });
 // endregion
 
+// #region STOCK
+app.command("/vjs-stock", async ({ ack, respond, body }) => {
+  await ack();
+  const symbol = body.text.trim().toUpperCase();
+  console.log(`[STOCK] User ${body.user_id} requested stock data for: "${symbol}"`);
+
+  try {
+    if (!symbol) {
+      // Show top 10 gainers
+      console.log(`[STOCK] Fetching top 10 gainers from Alpha Vantage`);
+      const response = await axios.get(
+        `https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey=${process.env.ALPHA_STOCKS}`
+      );
+      
+      if (!response.data.top_gainers) {
+        throw new Error("Failed to fetch top gainers data");
+      }
+      
+      const gainers = response.data.top_gainers.slice(0, 10);
+      console.log(`[STOCK] Successfully fetched ${gainers.length} top gainers`);
+
+      const gainersText = gainers
+        .map((stock, i) => `${i + 1}. *${stock.ticker}* - $${stock.price} (${stock.change_percentage})`)
+        .join("\n");
+
+      await respond({
+        blocks: [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `📈 *Top 10 Gainers Today*\n\n${gainersText}`
+            }
+          },
+          {
+            type: "context",
+            elements: [
+              {
+                type: "mrkdwn",
+                text: `Requested by <@${body.user_id}>`
+              }
+            ]
+          }
+        ],
+        response_type: "in_channel"
+      });
+      console.log(`[STOCK] Successfully sent top gainers to channel`);
+    } else {
+      // Show single stock data
+      console.log(`[STOCK] Fetching quote for symbol: "${symbol}"`);
+      const response = await axios.get(
+        `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${process.env.ALPHA_STOCKS}`
+      );
+
+      const quote = response.data["Global Quote"];
+      if (!quote || !quote["01. symbol"]) {
+        console.log(`[STOCK] Symbol "${symbol}" not found`);
+        return await respond({
+          text: `Symbol \`${symbol}\` not found. Please check and try again.`,
+          response_type: "ephemeral"
+        });
+      }
+
+      const price = quote["05. price"];
+      const change = quote["09. change"];
+      const changePercent = quote["10. change percent"];
+      const volume = quote["06. volume"];
+
+      console.log(`[STOCK] Successfully fetched quote - Price: $${price}, Change: ${changePercent}`);
+
+      await respond({
+        blocks: [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `💹 *${symbol}*\nPrice: $${price}\nChange: ${change} (${changePercent})\nVolume: ${volume}`
+            }
+          },
+          {
+            type: "context",
+            elements: [
+              {
+                type: "mrkdwn",
+                text: `Requested by <@${body.user_id}>`
+              }
+            ]
+          }
+        ],
+        response_type: "in_channel"
+      });
+      console.log(`[STOCK] Successfully sent stock data for "${symbol}" to channel`);
+    }
+  } catch (err) {
+    console.error(`[STOCK] Error fetching stock data:`, err.message);
+    await respond({
+      text: "Failed to fetch stock data. Please try again.",
+      response_type: "ephemeral"
+    });
+  }
+});
+// #endregion
+
 // region /vjs
 
 app.command("/vjs", async ({ command, ack, respond, body }) => {
@@ -154,11 +257,11 @@ app.command("/vjs-help", async ({ ack, respond, body }) => {
         text: {
           type: "mrkdwn",
           text: `*Available Commands:*
-/vjs-ping - Check bot latency
-/vjs-meow - Get a cat fact
-/vjs-joke - Get a funny joke
-/vjs-personal-add - add your personal site and channel to the canvas
-/vjs-personal-edit - edit your personal site and channel in the canvas`,
+\`/vjs-ping\` - Check bot latency
+\`/vjs-meow\` - Get a cat fact
+\`/vjs-joke\` - Get a funny joke
+\`/vjs-personal-add\` - add your personal site and channel to the canvas
+\`/vjs-personal-edit\` - edit your personal site and channel in the canvas`,
         },
       },
       {
@@ -166,8 +269,25 @@ app.command("/vjs-help", async ({ ack, respond, body }) => {
         text: {
           type: "mrkdwn",
           text: `*Working with words:*
-/vjs-dictionary [word] - Search up the meaning of your favourite word!
-/vjs-synonym [word] - Simple words don't suit your needs? Try a *synonym*!`,
+\`/vjs-dictionary\` [word] - Search up the meaning of your favourite word!
+\`/vjs-synonym\` [word] - Simple words don't suit your needs? Try a *synonym*!`,
+        },
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*Market Data:*
+\`/vjs-stock\` - See top 10 gainers for the day
+\`/vjs-stock\` [symbol] - Look up stock price & data (e.g. \`/vjs-stock AAPL\`)`,
+        },
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*Utilities:*
+\`/vjs-mail\` [email] - Validate an email address and check domain info`,
         },
       },
     ],
@@ -361,6 +481,83 @@ app.command("/vjs-synonym", async ({ ack, respond, body }) => {
     });
   }
 });
+// #endregion
+
+// #region MAIL CHECK
+
+app.command("/vjs-email", async ({ ack, respond, body }) => {
+  await ack();
+  const email = body.text.trim();
+  console.log(`[EMAIL] User ${body.user_id} requested email validation for: "${email}"`);
+
+  if (!email) {
+    console.log(`[EMAIL] No email provided`);
+    return respond({
+      text: "Usage: `/vjs-mail [email]`",
+      response_type: "ephemeral",
+    });
+  }
+
+  try {
+    console.log(`[EMAIL] Fetching validation data from Disify API for: "${email}"`);
+    const response = await axios.get(
+      `https://disify.com/api/email/${email}`
+    );
+    
+    const data = response.data;
+    console.log(`[EMAIL] API response received - Format: ${data.format}, Disposable: ${data.disposable}, Confidence: ${data.confidence}`);
+
+    // Extract key information
+    const format = data.format ? "Valid ✅" : "Invalid ❌";
+    const domain = data.domain || "N/A";
+    const disposable = data.disposable ? "Yes ⚠️" : "No ✅";
+    const dnsValid = data.dns ? "Yes ✅" : "No ❌";
+    const confidence = data.confidence ? `${Math.round(data.confidence * 100)}%` : "N/A";
+    const tld = data.domain_info?.tld || "N/A";
+    const mxRecords = data.mx_info?.length || 0;
+    const isRole = data.role ? "Yes (Role account)" : "No";
+    const isFree = data.free ? "Yes" : "No";
+
+    console.log(`[EMAIL] Extracted - Format: ${format}, TLD: ${tld}, MX Records: ${mxRecords}, Free: ${isFree}`);
+
+    await respond({
+      blocks: [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `📧 *Email Validation for ${email}*\n\nFormat: ${format}\nDomain: ${domain}\nDisposable: ${disposable}\nDNS Valid: ${dnsValid}\nConfidence: ${confidence}`
+          }
+        },
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `*Additional Info:*\nTLD: ${tld}\nMX Records: ${mxRecords}\nRole Account: ${isRole}\nFree Email: ${isFree}`
+          }
+        },
+        {
+          type: "context",
+          elements: [
+            {
+              type: "mrkdwn",
+              text: `Requested by <@${body.user_id}>`
+            }
+          ]
+        }
+      ],
+      response_type: "in_channel"
+    });
+    console.log(`[EMAIL] Successfully sent validation result for "${email}" to channel`);
+  } catch (err) {
+    console.error(`[EMAIL] Error fetching email data for "${email}":`, err.message);
+    await respond({
+      text: "Failed to fetch email validation data. Please check the email and try again.",
+      response_type: "ephemeral"
+    });
+  }
+});
+
 // #endregion
 
 (async () => {
