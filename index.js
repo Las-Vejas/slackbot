@@ -9,6 +9,45 @@ const app = new App({
   socketMode: true,
 });
 
+// region PING
+app.command("/vjs-ping", async ({ command, ack, respond }) => {
+  const start = Date.now();
+  await ack();
+  const latency = Date.now() - start;
+  await respond({ text: `Pong!\nLatency: ${latency}ms` });
+});
+// endregion
+
+// region /vjs
+
+app.command("/vjs", async ({ command, ack, respond, body }) => {
+  await ack();
+  console.log(`[VJS] User ${body.user_id} invoked the main /vjs command`);
+  
+  await respond({
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `👋 *Hey there!* I'm the VJS bot, here to help you with fun facts, jokes, word lookups, and more!`
+        }
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `Use \`/vjs-help\` to see all available commands.`
+        }
+      }
+    ],
+    response_type: "ephemeral"
+  });
+  console.log(`[VJS] Sent greeting to user ${body.user_id}`);
+});
+
+// endregion
+
 // #region MEOW
 app.command("/vjs-meow", async ({ ack, respond, body }) => {
   await ack();
@@ -165,8 +204,25 @@ app.command("/vjs-name", async ({ ack, respond, body }) => {
       : "Unknown";
     console.log(`[NAME] Extracted - Nationality: ${nationality}`);
     await respond({
-      text: `Name: ${name}\nGender: ${responseGender.data.gender} (${Math.round(responseGender.data.probability * 100)}%)\nLikely Nationality: ${nationality}`,
-      response_type: "in_channel",
+      blocks: [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `*${name}*\nGender: ${responseGender.data.gender} (${Math.round(responseGender.data.probability * 100)}%)\nLikely Nationality: ${nationality}`
+          }
+        },
+        {
+          type: "context",
+          elements: [
+            {
+              type: "mrkdwn",
+              text: `Requested by <@${body.user_id}>`
+            }
+          ]
+        }
+      ],
+      response_type: "in_channel"
     });
     console.log(`[NAME] Successfully sent name analysis for "${name}" to channel`);
   } catch (err) {
