@@ -1,0 +1,58 @@
+
+const skillIssueResponses = [
+  "That's a skill issue",
+  "Sounds like a skill issue to me",
+  "Skill issue detected 🚨",
+  "This is giving skill issue energy",
+  "not a bug, a skill issue",
+  "Have you tried being more skilled?",
+  "Skill issue moment right there",
+  "ratio'd by your own incompetence",
+  "That's cap, it's definitely a skill issue",
+  "common skill issue, happens to the best of us",
+  "SKILL ISSUE ALERT 📢",
+  "your skill is...issuing",
+  "bro that's not a feature, that's a skill issue",
+  "you: 🤡 | skill: 📉",
+  "maybe read the docs? Skill issue.",
+  "this is what happens when you don't RTFM",
+  "skill check failed",
+  "error 404: skill not found",
+  "that's not a feature, that's a you problem",
+  "big L for skill",
+];
+
+app.command("/v-test", async ({ command, ack, respond }) => {
+  const start = Date.now();
+  await ack();
+  const latency = Date.now() - start;
+  await respond({ text: `Pong!\nLatency: ${latency}ms` });
+});
+
+app.command("/skill-issue", async ({ ack, body, respond }) => {
+  await ack();
+  
+  const response =
+    skillIssueResponses[Math.floor(Math.random() * skillIssueResponses.length)];
+  const mentionText = body.text.trim();
+
+  const message = mentionText
+    ? `${mentionText} ${response}`
+    : `<@${body.user_id}> ${response}`;
+
+  await respond({
+    text: message,
+    response_type: "in_channel",
+  });
+});
+
+// Auto-detect complaints and roast (only in your channel)
+app.message(/didn't work|doesn't work|broken|bug|error|fail|crash|not working|wtf|this sucks/i, async ({ say, message }) => {
+  // Replace "YOUR_CHANNEL_ID" with your actual channel ID
+  if (message.channel !== "C0B6TNB4BSB") return;
+  
+  const response =
+    skillIssueResponses[Math.floor(Math.random() * skillIssueResponses.length)];
+  
+  say(`<@${message.user}> ${response}`);
+});
