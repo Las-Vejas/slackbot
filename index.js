@@ -40,6 +40,48 @@ app.event("member_joined_channel", async ({ event, client }) => {
 });
 // #endregion
 
+// #region USER PROFILE PICTURE ROTATION
+const userProfilePictures = [
+  "https://cdn.hackclub.com/019e8a75-1af8-73d3-bd1e-c988df1eb7bb/Screen%20Shot%202026-06-03%20at%2000.21.00.png",
+  "https://cdn.hackclub.com/019e8a75-3729-7a6f-8113-383058bad593/Screen%20Shot%202026-06-03%20at%2000.21.45.png",
+  "https://cdn.hackclub.com/019e8a75-5ce4-73ef-8201-1e0e82c3b6ea/Screen%20Shot%202026-06-03%20at%2000.21.24.png",
+  "https://cdn.hackclub.com/019e8a75-6c43-7b6e-8478-6356e3e6d0ed/Screen%20Shot%202026-06-03%20at%2000.22.12.png",
+  "https://cdn.hackclub.com/019e8a75-7a0e-7400-a0eb-269a3b9c0dac/Screen%20Shot%202026-06-03%20at%2000.23.10.png",
+];
+
+let currentUserPfpIndex = 0;
+const FormData = require('form-data');
+
+const changeUserPfp = async () => {
+  try {
+    const imageUrl = userProfilePictures[currentUserPfpIndex];
+    
+    const imageResponse = await axios.get(imageUrl, { responseType: 'stream' });
+    
+    const form = new FormData();
+    form.append('image', imageResponse.data);
+    
+    const response = await axios.post("https://slack.com/api/users.setPhoto", form, {
+      headers: {
+        ...form.getHeaders(),
+        Authorization: `Bearer ${process.env.SLACK_USER_TOKEN}`,
+      },
+    });
+    
+    if (response.data.ok) {
+      console.log(`[USER-PFP] Changed your profile picture to: ${imageUrl}`);
+      currentUserPfpIndex = (currentUserPfpIndex + 1) % userProfilePictures.length;
+    } else {
+      console.error(`[USER-PFP] API Error:`, response.data.error);
+    }
+  } catch (err) {
+    console.error(`[USER-PFP] Error:`, err.message);
+  }
+};
+
+setInterval(changeUserPfp, 300000);
+// #endregion
+
 // #region CENTRAL ROUTER
 app.command("/vjs", async ({ command, ack, respond, body }) => {
   await ack();
