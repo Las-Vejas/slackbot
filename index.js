@@ -884,11 +884,7 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
             text: {
               type: "mrkdwn",
               text: `👋 *Hey there!* I'm the VJS bot, here to help you!\n\n*Available Commands:*
-\`/vjs ping\` - Check bot latency
-\`/vjs meow\` - Get a cat fact
-\`/vjs joke\` - Get a funny joke
-\`/vjs personal-add\` - Add your personal site and channel to the canvas
-\`/vjs personal-edit\` - Edit your personal site and channel in the canvas`,
+\`/vjs ping\` - Check bot latency`,
             },
           },
           {
@@ -914,9 +910,23 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
             type: "section",
             text: {
               type: "mrkdwn",
+              text: `*Fun:*
+\`/vjs trivia\` - Test your knowledge with some trivia!
+\`/vjs trivia points\` - Look up the VJS trivia leaderboard!
+\`/vjs eightball\` - have the eight ball decide your fate!
+\`/vjs meow\` - Get a cat fact
+\`/vjs joke\` - Get a funny joke`,
+            },
+          },
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
               text: `*Utilities:*
 \`/vjs email [email]\` - Validate an email address and check domain info
-\`/vjs qr [link/text] [theme] [format] \` - Generate a QR code from a link or some text`,
+\`/vjs qr [link/text] [theme] [format] \` - Generate a QR code from a link or some text
+\`/vjs poll "question" "ans1" "ans2" etc\` - make a poll! add as many answers as you want
+\`/vjs weather [location] [number of days (opt)]\` - find the weather in a certain loaction!`,
             },
           },
           {
