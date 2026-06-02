@@ -135,7 +135,10 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
               {
                 type: "context",
                 elements: [
-                  { type: "mrkdwn", text: `Requested by <@${body.user_id}> using \`/vjs stock\`` },
+                  {
+                    type: "mrkdwn",
+                    text: `Requested by <@${body.user_id}> using \`/vjs stock\``,
+                  },
                 ],
               },
             ],
@@ -170,7 +173,10 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
             {
               type: "context",
               elements: [
-                { type: "mrkdwn", text: `Requested by <@${body.user_id}> using \`/vjs meow\`` },
+                {
+                  type: "mrkdwn",
+                  text: `Requested by <@${body.user_id}> using \`/vjs meow\``,
+                },
               ],
             },
           ],
@@ -206,7 +212,10 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
             {
               type: "context",
               elements: [
-                { type: "mrkdwn", text: `Requested by <@${body.user_id}> using \`/vjs joke\`` },
+                {
+                  type: "mrkdwn",
+                  text: `Requested by <@${body.user_id}> using \`/vjs joke\``,
+                },
               ],
             },
           ],
@@ -257,7 +266,10 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
             {
               type: "context",
               elements: [
-                { type: "mrkdwn", text: `Requested by <@${body.user_id}> using \`/vjs name\`` },
+                {
+                  type: "mrkdwn",
+                  text: `Requested by <@${body.user_id}> using \`/vjs name\``,
+                },
               ],
             },
           ],
@@ -310,7 +322,10 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
             {
               type: "context",
               elements: [
-                { type: "mrkdwn", text: `Requested by <@${body.user_id}> using \`/vjs dictionary\`` },
+                {
+                  type: "mrkdwn",
+                  text: `Requested by <@${body.user_id}> using \`/vjs dictionary\``,
+                },
               ],
             },
           ],
@@ -371,7 +386,10 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
             {
               type: "context",
               elements: [
-                { type: "mrkdwn", text: `Requested by <@${body.user_id}> using \`/vjs synonym\`` },
+                {
+                  type: "mrkdwn",
+                  text: `Requested by <@${body.user_id}> using \`/vjs synonym\``,
+                },
               ],
             },
           ],
@@ -436,7 +454,10 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
             {
               type: "context",
               elements: [
-                { type: "mrkdwn", text: `Requested by <@${body.user_id}> using \`/vjs mail\`` },
+                {
+                  type: "mrkdwn",
+                  text: `Requested by <@${body.user_id}> using \`/vjs mail\``,
+                },
               ],
             },
           ],
@@ -481,7 +502,7 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
 
       const themeName = qrThemes[rawTheme?.toLowerCase()]
         ? rawTheme.toLowerCase()
-        : "slate";
+        : "midnight";
       const selectedTheme = qrThemes[themeName];
 
       const validFormats = ["png", "gif", "jpeg", "jpg", "svg", "eps"];
@@ -503,7 +524,7 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
               type: "section",
               text: {
                 type: "mrkdwn",
-                text: "Available themes: `midnight`, `gold`, `crimson`, `moss`, `slate`",
+                text: "Available themes: `midnight (default)`, `gold`, `crimson`, `moss`, `slate`",
               },
             },
             {
@@ -518,7 +539,7 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
         });
       }
 
-      const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(link)}&color=${selectedTheme.color}&bgcolor=${selectedTheme.bgcolor}&format=${format}`;
+      const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(link)}&color=${selectedTheme.color}&bgcolor=${selectedTheme.bgcolor}&format=${format}&margin=10`;
 
       if (format === "svg" || format === "eps") {
         await respond({
@@ -533,7 +554,10 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
             {
               type: "context",
               elements: [
-                { type: "mrkdwn", text: `Requested by <@${body.user_id}> using \`/vjs qr\`` },
+                {
+                  type: "mrkdwn",
+                  text: `Requested by <@${body.user_id}> using \`/vjs qr\``,
+                },
               ],
             },
           ],
@@ -565,6 +589,114 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
             },
           ],
           response_type: responseVisibility,
+        });
+      }
+      break;
+    }
+
+    // ==========================================
+    // WEATHER
+    // ==========================================
+
+    case "weather": {
+      const parts = param.trim().split(/\s+/);
+      const city = parts[0];
+      const days = parseInt(parts[1]) || 0;
+
+      if (!city)
+        return respond({
+          text: "Usage: `/vjs weather [city] [days]`",
+          response_type: "ephemeral",
+        });
+      if (days && (days < 1 || days > 10 || isNaN(days))) {
+        return respond({
+          text: "Days must be between 1 and 10.",
+          response_type: "ephemeral",
+        });
+      }
+
+      try {
+        const endpoint = days > 0 ? "forecast.json" : "current.json";
+        const params = {
+          key: process.env.WEATHER,
+          q: city,
+          aqi: "no",
+        };
+        if (days > 0) params.days = days;
+
+        const response = await axios.get(
+          `https://api.weatherapi.com/v1/${endpoint}`,
+          { params },
+        );
+        const { location, current, forecast } = response.data;
+
+        const blocks = [
+          {
+            type: "header",
+            text: {
+              type: "plain_text",
+              text: `🌤️ ${location.name}, ${location.country}`,
+            },
+          },
+        ];
+
+        if (days > 0 && forecast) {
+          // Forecast mode
+          forecast.forecastday.forEach((day, index) => {
+            const dateLabel =
+              index === 0
+                ? "Today"
+                : new Date(day.date).toLocaleDateString("en-US", {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                  });
+            blocks.push({
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `*${dateLabel}*\nHigh: ${day.day.maxtemp_c}°C | Low: ${day.day.mintemp_c}°C\n${day.day.condition.text}`,
+              },
+            });
+          });
+        } else {
+          // Current conditions
+          blocks.push({
+            type: "section",
+            fields: [
+              { type: "mrkdwn", text: `*Temperature*\n${current.temp_c}°C` },
+              {
+                type: "mrkdwn",
+                text: `*Feels Like*\n${current.feelslike_c}°C`,
+              },
+              {
+                type: "mrkdwn",
+                text: `*Condition*\n${current.condition.text}`,
+              },
+              { type: "mrkdwn", text: `*Humidity*\n${current.humidity}%` },
+            ],
+          });
+        }
+
+        blocks.push({
+          type: "context",
+          elements: [
+            {
+              type: "mrkdwn",
+              text: `Requested by <@${body.user_id}> using \`/vjs weather\``,
+            },
+          ],
+        });
+
+        await respond({
+          blocks,
+          response_type: responseVisibility,
+        });
+      } catch (err) {
+        console.error("Weather API error:", err.message);
+        await respond({
+          text: `Error: Could not fetch weather for "${city}". Check the city name and try again.`,
+          response_type: "ephemeral",
         });
       }
       break;
