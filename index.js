@@ -37,7 +37,7 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
   let responseVisibility = "in_channel";
   if (/\s+-q\b|\b-q\s+/i.test(rawText)) {
     responseVisibility = "ephemeral";
-    rawText = rawText.replace(/\s+-q\b|\b-q\s+/ig, "").trim();
+    rawText = rawText.replace(/\s+-q\b|\b-q\s+/gi, "").trim();
   }
 
   // Parse input string: /vjs [func] [param]
@@ -135,7 +135,7 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
               {
                 type: "context",
                 elements: [
-                  { type: "mrkdwn", text: `Requested by <@${body.user_id}>` },
+                  { type: "mrkdwn", text: `Requested by <@${body.user_id}> using \`/vjs stock\`` },
                 ],
               },
             ],
@@ -170,7 +170,7 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
             {
               type: "context",
               elements: [
-                { type: "mrkdwn", text: `Requested by <@${body.user_id}>` },
+                { type: "mrkdwn", text: `Requested by <@${body.user_id}> using \`/vjs meow\`` },
               ],
             },
           ],
@@ -206,7 +206,7 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
             {
               type: "context",
               elements: [
-                { type: "mrkdwn", text: `Requested by <@${body.user_id}>` },
+                { type: "mrkdwn", text: `Requested by <@${body.user_id}> using \`/vjs joke\`` },
               ],
             },
           ],
@@ -257,7 +257,7 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
             {
               type: "context",
               elements: [
-                { type: "mrkdwn", text: `Requested by <@${body.user_id}>` },
+                { type: "mrkdwn", text: `Requested by <@${body.user_id}> using \`/vjs name\`` },
               ],
             },
           ],
@@ -265,7 +265,10 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
         });
       } catch (err) {
         console.error(`[NAME] Error fetching data for "${name}":`, err.message);
-        await respond({ text: "Failed to fetch data for that name.", response_type: "ephemeral" });
+        await respond({
+          text: "Failed to fetch data for that name.",
+          response_type: "ephemeral",
+        });
       }
       break;
     }
@@ -307,7 +310,7 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
             {
               type: "context",
               elements: [
-                { type: "mrkdwn", text: `Requested by <@${body.user_id}>` },
+                { type: "mrkdwn", text: `Requested by <@${body.user_id}> using \`/vjs dictionary\`` },
               ],
             },
           ],
@@ -332,21 +335,27 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
     case "synonym": {
       const word = param.trim();
       if (!word) {
-        return respond({ text: "Usage: `/vjs synonym [word]`", response_type: "ephemeral" });
+        return respond({
+          text: "Usage: `/vjs synonym [word]`",
+          response_type: "ephemeral",
+        });
       }
       try {
         const response = await axios.get(
-          `https://dictionaryapi.com/api/v3/references/thesaurus/json/${word}?key=${process.env.MW_THES}`
+          `https://dictionaryapi.com/api/v3/references/thesaurus/json/${word}?key=${process.env.MW_THES}`,
         );
-        
+
         const data = response.data[0];
         if (!data || !data.meta) {
-          return await respond({ text: `Could not find any results for \`${word}\`.`, response_type: "ephemeral" });
+          return await respond({
+            text: `Could not find any results for \`${word}\`.`,
+            response_type: "ephemeral",
+          });
         }
 
         const wordEntry = data.hwi?.hw || word;
         const partOfSpeech = data.fl || "N/A";
-        
+
         const synonyms = data.meta.syns?.[0]?.join(", ") || "No synonyms found";
         const antonyms = data.meta.ants?.[0]?.join(", ") || "No antonyms found";
 
@@ -354,22 +363,30 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
           blocks: [
             {
               type: "section",
-              text: { type: "mrkdwn", text: `Synonyms for *${wordEntry}*\n_${partOfSpeech}_\n\n*Synonyms:*\n${synonyms}\n\n*Antonyms:*\n${antonyms}` }
+              text: {
+                type: "mrkdwn",
+                text: `Synonyms for *${wordEntry}*\n_${partOfSpeech}_\n\n*Synonyms:*\n${synonyms}\n\n*Antonyms:*\n${antonyms}`,
+              },
             },
             {
               type: "context",
-              elements: [{ type: "mrkdwn", text: `Requested by <@${body.user_id}>` }]
-            }
+              elements: [
+                { type: "mrkdwn", text: `Requested by <@${body.user_id}> using \`/vjs synonym\`` },
+              ],
+            },
           ],
           response_type: responseVisibility,
         });
       } catch (err) {
         console.error(err.message);
-        await respond({ text: "Failed to fetch synonyms.", response_type: "ephemeral" });
+        await respond({
+          text: "Failed to fetch synonyms.",
+          response_type: "ephemeral",
+        });
       }
       break;
     }
-    
+
     // ==========================================
     // EMAIL
     // ==========================================
@@ -419,7 +436,7 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
             {
               type: "context",
               elements: [
-                { type: "mrkdwn", text: `Requested by <@${body.user_id}>` },
+                { type: "mrkdwn", text: `Requested by <@${body.user_id}> using \`/vjs mail\`` },
               ],
             },
           ],
@@ -461,12 +478,16 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
     // ==========================================
     case "qr": {
       const [link, rawTheme, rawFormat] = param.trim().split(/\s+/);
-      
-      const themeName = qrThemes[rawTheme?.toLowerCase()] ? rawTheme.toLowerCase() : "slate";
+
+      const themeName = qrThemes[rawTheme?.toLowerCase()]
+        ? rawTheme.toLowerCase()
+        : "slate";
       const selectedTheme = qrThemes[themeName];
 
       const validFormats = ["png", "gif", "jpeg", "jpg", "svg", "eps"];
-      const format = validFormats.includes(rawFormat?.toLowerCase()) ? rawFormat.toLowerCase() : "png";
+      const format = validFormats.includes(rawFormat?.toLowerCase())
+        ? rawFormat.toLowerCase()
+        : "png";
 
       if (!link) {
         return respond({
@@ -480,11 +501,17 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
             },
             {
               type: "section",
-              text: { type: "mrkdwn", text: "Available themes: `midnight`, `gold`, `crimson`, `moss`, `slate`" },
+              text: {
+                type: "mrkdwn",
+                text: "Available themes: `midnight`, `gold`, `crimson`, `moss`, `slate`",
+              },
             },
             {
               type: "section",
-              text: { type: "mrkdwn", text: "Available formats: `png`, `jpg`, `gif`, `svg`, `eps`" },
+              text: {
+                type: "mrkdwn",
+                text: "Available formats: `png`, `jpg`, `gif`, `svg`, `eps`",
+              },
             },
           ],
           response_type: "ephemeral",
@@ -505,7 +532,9 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
             },
             {
               type: "context",
-              elements: [{ type: "mrkdwn", text: `Requested by <@${body.user_id}>` }],
+              elements: [
+                { type: "mrkdwn", text: `Requested by <@${body.user_id}> using \`/vjs qr\`` },
+              ],
             },
           ],
           response_type: responseVisibility,
@@ -527,7 +556,12 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
             },
             {
               type: "context",
-              elements: [{ type: "mrkdwn", text: `Requested by <@${body.user_id}>` }],
+              elements: [
+                {
+                  type: "mrkdwn",
+                  text: `Requested by <@${body.user_id}> using \`/vjs qr\``,
+                },
+              ],
             },
           ],
           response_type: responseVisibility,
