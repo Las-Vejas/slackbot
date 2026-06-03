@@ -1215,55 +1215,6 @@ app.action(/^trivia_ans_\d+$/, async ({ ack, action, body, respond }) => {
     },
   ];
 
-  // ==========================================
-  // HANDLE FEEDBACK SUBMISSION
-  // ==========================================
-  app.view("feedback_modal", async ({ ack, body, view, client }) => {
-    ack();
-
-    const rating =
-      view.state.values.rating_block?.static_select?.selected_option?.value;
-    const comment = view.state.values.comment_block?.plain_text_input?.value;
-    const userId = body.user.id;
-    const userName = body.user.username;
-
-    // 📌 DO SOMETHING WITH THE FEEDBACK
-    // Pick one or combine:
-
-    // Option 1: Post to a private channel
-    await client.chat.postMessage({
-      channel: "C0B6TNB4BSB", // Your #feedback channel ID
-      text: `📝 New Feedback from <@${userId}>`,
-      blocks: [
-        {
-          type: "section",
-          text: {
-            type: "mrkdwn",
-            text: `*Rating:* ${["❌", "👎", "😐", "👍", "⭐"][rating - 1]} (${rating}/5)\n*User:* <@${userId}>\n*Comment:* ${comment || "No comment"}`,
-          },
-        },
-      ],
-    });
-
-    // Option 2: Save to database (replace with your DB)
-    // await db.feedback.insert({ userId, userName, rating, comment, timestamp: new Date() });
-
-    // Option 3: Send to external service (Webhook, Google Sheets, etc.)
-    // await fetch("YOUR_WEBHOOK_URL", { method: "POST", body: JSON.stringify({ userId, rating, comment }) });
-
-    // Send confirmation to user
-    await client.chat.postMessage({
-      channel: userId,
-      text: "✅ Thanks for the feedback! It helps us improve.",
-    });
-  });
-
-  await respond({
-    blocks: freshBlocks,
-    replace_original: true,
-  });
-});
-
 // ==========================================
 // HANDLE FEEDBACK SUBMISSION
 // ==========================================
