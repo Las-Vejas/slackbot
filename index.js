@@ -10,14 +10,14 @@ const app = new App({
   socketMode: true,
 });
 
-const fs = require('fs');
-const SCORES_FILE = './trivia_scores.json';
+const fs = require("fs");
+const SCORES_FILE = "./trivia_scores.json";
 
 // Load existing scores on startup, or initialize an empty object if the file doesn't exist
 let triviaScores = {};
 if (fs.existsSync(SCORES_FILE)) {
   try {
-    triviaScores = JSON.parse(fs.readFileSync(SCORES_FILE, 'utf8'));
+    triviaScores = JSON.parse(fs.readFileSync(SCORES_FILE, "utf8"));
   } catch (err) {
     console.error("Error reading scores file, starting fresh:", err.message);
   }
@@ -50,27 +50,32 @@ const userProfilePictures = [
 ];
 
 let currentUserPfpIndex = 0;
-const FormData = require('form-data');
+const FormData = require("form-data");
 
 const changeUserPfp = async () => {
   try {
     const imageUrl = userProfilePictures[currentUserPfpIndex];
-    
-    const imageResponse = await axios.get(imageUrl, { responseType: 'stream' });
-    
+
+    const imageResponse = await axios.get(imageUrl, { responseType: "stream" });
+
     const form = new FormData();
-    form.append('image', imageResponse.data);
-    
-    const response = await axios.post("https://slack.com/api/users.setPhoto", form, {
-      headers: {
-        ...form.getHeaders(),
-        Authorization: `Bearer ${process.env.SLACK_USER_TOKEN}`,
+    form.append("image", imageResponse.data);
+
+    const response = await axios.post(
+      "https://slack.com/api/users.setPhoto",
+      form,
+      {
+        headers: {
+          ...form.getHeaders(),
+          Authorization: `Bearer ${process.env.SLACK_USER_TOKEN}`,
+        },
       },
-    });
-    
+    );
+
     if (response.data.ok) {
       console.log(`[USER-PFP] Changed your profile picture to: ${imageUrl}`);
-      currentUserPfpIndex = (currentUserPfpIndex + 1) % userProfilePictures.length;
+      currentUserPfpIndex =
+        (currentUserPfpIndex + 1) % userProfilePictures.length;
     } else {
       console.error(`[USER-PFP] API Error:`, response.data.error);
     }
@@ -83,7 +88,7 @@ setInterval(changeUserPfp, 300000);
 // #endregion
 
 // #region CENTRAL ROUTER
-app.command("/vjs", async ({ command, ack, respond, body }) => {
+app.command("/vjs", async ({ command, ack, respond, body, client }) => {
   await ack();
 
   let rawText = body.text ? body.text.trim() : "";
@@ -762,17 +767,20 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
     // ==========================================
 
     case "poll": {
-        if (!param.trim()) {
-            return respond({
-                text: "*Usage:* \`/vjs poll \"Your Question\" \"Option 1\" \"Option 2\"\`",
-                response_type: "ephemeral",
-            });
-        }
-        const parts = param.match(/"[^"]+"|\S+/g)?.map(item => item.replace(/^"|"+$/g, "").trim()) || [];
-        const question = parts[0];
-        const options = parts.slice(1);
+      if (!param.trim()) {
+        return respond({
+          text: '*Usage:* \`/vjs poll "Your Question" "Option 1" "Option 2"\`',
+          response_type: "ephemeral",
+        });
+      }
+      const parts =
+        param
+          .match(/"[^"]+"|\S+/g)
+          ?.map((item) => item.replace(/^"|"+$/g, "").trim()) || [];
+      const question = parts[0];
+      const options = parts.slice(1);
 
-        if (options.length < 2) {
+      if (options.length < 2) {
         return respond({
           text: "*Error:* You must provide a question and at least 2 options wrapped in quotes.",
           response_type: "ephemeral",
@@ -782,25 +790,30 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
         type: "button",
         text: { type: "plain_text", text: option, emoji: true },
         value: `vote_${index}`,
-        action_id: `poll_vote_${index}`
+        action_id: `poll_vote_${index}`,
       }));
 
       await respond({
         blocks: [
           {
             type: "section",
-            text: { type: "mrkdwn", text: `📊 *NEW POLL:* ${question}` }
+            text: { type: "mrkdwn", text: `📊 *NEW POLL:* ${question}` },
           },
           {
             type: "actions",
-            elements: actionElements
+            elements: actionElements,
           },
           {
             type: "context",
-            elements: [{ type: "mrkdwn", text: `Created by <@${body.user_id}> using \`/vjs poll\`` }]
-          }
+            elements: [
+              {
+                type: "mrkdwn",
+                text: `Created by <@${body.user_id}> using \`/vjs poll\``,
+              },
+            ],
+          },
         ],
-        response_type: responseVisibility
+        response_type: responseVisibility,
       });
       break;
     }
@@ -811,25 +824,41 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
 
     case "eightball": {
       try {
-        const response = await axios.get(`https://eightballapi.com/api?locale=en`);
-        const answer = response.data.reading || response.data.response || "The future is unclear.";
+        const response = await axios.get(
+          `https://eightballapi.com/api?locale=en`,
+        );
+        const answer =
+          response.data.reading ||
+          response.data.response ||
+          "The future is unclear.";
 
         await respond({
           blocks: [
             {
               type: "section",
-              text: { type: "mrkdwn", text: `🔮 *The Magic 8-Ball says:* "${answer}"` }
+              text: {
+                type: "mrkdwn",
+                text: `🔮 *The Magic 8-Ball says:* "${answer}"`,
+              },
             },
             {
               type: "context",
-              elements: [{ type: "mrkdwn", text: `Requested by <@${body.user_id}> using \`/vjs eightball\`` }]
-            }
+              elements: [
+                {
+                  type: "mrkdwn",
+                  text: `Requested by <@${body.user_id}> using \`/vjs eightball\``,
+                },
+              ],
+            },
           ],
           response_type: responseVisibility,
         });
       } catch (err) {
         console.error(`[8BALL] Error:`, err.message);
-        await respond({ text: "⚠️ The magic 8-ball is cloudy right now.", response_type: "ephemeral" });
+        await respond({
+          text: "⚠️ The magic 8-ball is cloudy right now.",
+          response_type: "ephemeral",
+        });
       }
       break;
     }
@@ -846,17 +875,24 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
         if (scoreEntries.length === 0) {
           return await respond({
             text: "🏆 *Trivia Leaderboard:* No points scored yet! Start playing with `/vjs trivia`.",
-            response_type: responseVisibility
+            response_type: responseVisibility,
           });
         }
 
         // Sort users highest score to lowest
         const sortedScores = scoreEntries.sort((a, b) => b[1] - a[1]);
-        
+
         // Map data to a neat, numbered list string with medals
         const leaderboardText = sortedScores
           .map(([userId, points], index) => {
-            const medal = index === 0 ? "🥇 " : index === 1 ? "🥈 " : index === 2 ? "🥉 " : "• ";
+            const medal =
+              index === 0
+                ? "🥇 "
+                : index === 1
+                  ? "🥈 "
+                  : index === 2
+                    ? "🥉 "
+                    : "• ";
             return `${medal}<@${userId}>: *${points} pts*`;
           })
           .join("\n");
@@ -865,53 +901,134 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
           blocks: [
             {
               type: "section",
-              text: { type: "mrkdwn", text: `🏆 *VJS TRIVIA LEADERBOARD*\n\n${leaderboardText}` }
+              text: {
+                type: "mrkdwn",
+                text: `🏆 *VJS TRIVIA LEADERBOARD*\n\n${leaderboardText}`,
+              },
             },
             {
               type: "context",
-              elements: [{ type: "mrkdwn", text: `Requested by <@${body.user_id}>` }]
-            }
+              elements: [
+                { type: "mrkdwn", text: `Requested by <@${body.user_id}>` },
+              ],
+            },
           ],
-          response_type: "ephemeral"
+          response_type: "ephemeral",
         });
       }
 
       // 2. Your existing random trivia generator code follows naturally
       try {
-        const response = await axios.get("https://opentdb.com/api.php?amount=1&type=multiple");
+        const response = await axios.get(
+          "https://opentdb.com/api.php?amount=1&type=multiple",
+        );
         const q = response.data.results[0];
-        
-        const cleanQuestion = q.question.replace(/&quot;/g, '"').replace(/&#039;/g, "'").replace(/&amp;/g, "&");
-        const correctAnswer = q.correct_answer.replace(/&quot;/g, '"').replace(/&#039;/g, "'").replace(/&amp;/g, "&");
 
-        const allAnswers = [...q.incorrect_answers.map(a => a.replace(/&quot;/g, '"').replace(/&#039;/g, "'")), correctAnswer]
-          .sort(() => Math.random() - 0.5);
+        const cleanQuestion = q.question
+          .replace(/&quot;/g, '"')
+          .replace(/&#039;/g, "'")
+          .replace(/&amp;/g, "&");
+        const correctAnswer = q.correct_answer
+          .replace(/&quot;/g, '"')
+          .replace(/&#039;/g, "'")
+          .replace(/&amp;/g, "&");
+
+        const allAnswers = [
+          ...q.incorrect_answers.map((a) =>
+            a.replace(/&quot;/g, '"').replace(/&#039;/g, "'"),
+          ),
+          correctAnswer,
+        ].sort(() => Math.random() - 0.5);
 
         const buttons = allAnswers.map((answer, idx) => ({
           type: "button",
           text: { type: "plain_text", text: answer },
-          value: JSON.stringify({ ans: correctAnswer, q: cleanQuestion, cat: q.category }),
-          action_id: `trivia_ans_${idx}`
+          value: JSON.stringify({
+            ans: correctAnswer,
+            q: cleanQuestion,
+            cat: q.category,
+          }),
+          action_id: `trivia_ans_${idx}`,
         }));
 
         await respond({
           blocks: [
-            { 
-              type: "section", 
-              text: { type: "mrkdwn", text: `🧠 *TRIVIA TIME!*\n*Category:* ${q.category} | *Difficulty:* ${q.difficulty}\n\n*Question:* ${cleanQuestion}` } 
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `🧠 *TRIVIA TIME!*\n*Category:* ${q.category} | *Difficulty:* ${q.difficulty}\n\n*Question:* ${cleanQuestion}`,
+              },
             },
             { type: "actions", elements: buttons },
-            { type: "context", elements: [{ type: "mrkdwn", text: `Triggered by <@${body.user_id}>` }] }
+            {
+              type: "context",
+              elements: [
+                { type: "mrkdwn", text: `Triggered by <@${body.user_id}>` },
+              ],
+            },
           ],
-          response_type: responseVisibility
+          response_type: responseVisibility,
         });
       } catch (err) {
         console.error(err.message);
-        await respond({ text: "Failed to fetch trivia.", response_type: "ephemeral" });
+        await respond({
+          text: "Failed to fetch trivia.",
+          response_type: "ephemeral",
+        });
       }
       break;
     }
-    
+
+    // ==========================================
+    // FEEDBACK
+    // ==========================================
+    case "feedback": {
+  try {
+    await client.views.open({
+      trigger_id: body.trigger_id,
+      view: {
+        type: "modal",
+        callback_id: "feedback_modal",
+        title: { type: "plain_text", text: "Bot Feedback" },
+        submit: { type: "plain_text", text: "Send" },
+        blocks: [
+          {
+            type: "input",
+            block_id: "rating_block",
+            label: { type: "plain_text", text: "How helpful was this bot?" },
+            element: {
+              type: "static_select",
+              action_id: "rating_select", // ✅ ADD THIS
+              options: [
+                { text: { type: "plain_text", text: "⭐ Great" }, value: "5" },
+                { text: { type: "plain_text", text: "👍 Good" }, value: "4" },
+                { text: { type: "plain_text", text: "😐 OK" }, value: "3" },
+                { text: { type: "plain_text", text: "👎 Bad" }, value: "2" },
+                { text: { type: "plain_text", text: "❌ Terrible" }, value: "1" },
+              ],
+            },
+          },
+          {
+            type: "input",
+            block_id: "comment_block",
+            label: { type: "plain_text", text: "Any comments?" },
+            element: {
+              type: "plain_text_input",
+              action_id: "comment_input", // ✅ ADD THIS TOO
+              multiline: true,
+              placeholder: { type: "plain_text", text: "Tell me what you think..." },
+            },
+            optional: true,
+          },
+        ],
+      },
+    });
+  } catch (error) {
+    console.error("[FEEDBACK ERROR]", error);
+  }
+  break;
+}
 
     // ==========================================
     // HELP & FALLBACK
@@ -968,7 +1085,8 @@ app.command("/vjs", async ({ command, ack, respond, body }) => {
 \`/vjs email [email]\` - Validate an email address and check domain info
 \`/vjs qr [link/text] [theme] [format] \` - Generate a QR code from a link or some text
 \`/vjs poll "question" "ans1" "ans2" etc\` - make a poll! add as many answers as you want
-\`/vjs weather [location] [number of days (opt)]\` - find the weather in a certain loaction!`,
+\`/vjs weather [location] [number of days (opt)]\` - find the weather in a certain loaction!
+\`/vjs feedback\` - leave some feedback about the bot!`,
             },
           },
           {
@@ -1002,9 +1120,12 @@ app.action(/^poll_vote_\d+$/, async ({ ack, action, body, respond }) => {
   const userId = body.user.id;
 
   // 1. Find or create a hidden/visible context block to track voters
-  let contextBlock = originalBlocks.find(block => block.type === "context");
+  let contextBlock = originalBlocks.find((block) => block.type === "context");
   if (!contextBlock) {
-    contextBlock = { type: "context", elements: [{ type: "mrkdwn", text: "Voters: " }] };
+    contextBlock = {
+      type: "context",
+      elements: [{ type: "mrkdwn", text: "Voters: " }],
+    };
     originalBlocks.push(contextBlock);
   }
 
@@ -1016,7 +1137,7 @@ app.action(/^poll_vote_\d+$/, async ({ ack, action, body, respond }) => {
     return await respond({
       text: "⚠️ You have already cast your vote in this poll!",
       response_type: "ephemeral",
-      replace_original: false
+      replace_original: false,
     });
   }
 
@@ -1024,13 +1145,15 @@ app.action(/^poll_vote_\d+$/, async ({ ack, action, body, respond }) => {
   contextBlock.elements[0].text = `${votersText} <@${userId}>`;
 
   // 4. Increment the target button's vote counter ticker
-  const actionBlock = originalBlocks.find(block => block.type === "actions");
+  const actionBlock = originalBlocks.find((block) => block.type === "actions");
   if (actionBlock) {
     actionBlock.elements.forEach((button) => {
       if (button.action_id === action.action_id) {
         const baseText = button.text.text.replace(/\s\(\d+\)$/, "");
         const currentVotesMatch = button.text.text.match(/\s\((\d+)\)$/);
-        const currentVotes = currentVotesMatch ? parseInt(currentVotesMatch[1], 10) : 0;
+        const currentVotes = currentVotesMatch
+          ? parseInt(currentVotesMatch[1], 10)
+          : 0;
         button.text.text = `${baseText} (${currentVotes + 1})`;
       }
     });
@@ -1039,7 +1162,7 @@ app.action(/^poll_vote_\d+$/, async ({ ack, action, body, respond }) => {
   // 5. Update the live poll interface block array
   await respond({
     blocks: originalBlocks,
-    replace_original: true
+    replace_original: true,
   });
 });
 
@@ -1054,7 +1177,7 @@ app.action(/^trivia_ans_\d+$/, async ({ ack, action, body, respond }) => {
     return await respond({
       text: `❌ *Incorrect!* \`${selectedAnswer}\` is wrong. Keep trying, <@${clickerId}>!`,
       response_type: "ephemeral",
-      replace_original: false
+      replace_original: false,
     });
   }
 
@@ -1063,7 +1186,10 @@ app.action(/^trivia_ans_\d+$/, async ({ ack, action, body, respond }) => {
 
   // 2. PERSISTENCE: Write the updated object directly to disk
   try {
-    fs.writeFileSync('./trivia_scores.json', JSON.stringify(triviaScores, null, 2));
+    fs.writeFileSync(
+      "./trivia_scores.json",
+      JSON.stringify(triviaScores, null, 2),
+    );
   } catch (err) {
     console.error("Failed to write trivia scores to file:", err.message);
   }
@@ -1071,21 +1197,112 @@ app.action(/^trivia_ans_\d+$/, async ({ ack, action, body, respond }) => {
   const freshBlocks = [
     {
       type: "section",
-      text: { type: "mrkdwn", text: `🧠 *TRIVIA TIME (CLOSED)*\n*Category:* ${cat}\n\n*Question:* ${q}` }
+      text: {
+        type: "mrkdwn",
+        text: `🧠 *TRIVIA TIME (CLOSED)*\n*Category:* ${cat}\n\n*Question:* ${q}`,
+      },
     },
     {
       type: "section",
-      text: { type: "mrkdwn", text: `🎉 *Correct!* <@${clickerId}> selected the correct answer: *${ans}*!\n🏆 They now have *${triviaScores[clickerId]} pts* total!` }
+      text: {
+        type: "mrkdwn",
+        text: `🎉 *Correct!* <@${clickerId}> selected the correct answer: *${ans}*!\n🏆 They now have *${triviaScores[clickerId]} pts* total!`,
+      },
     },
     {
       type: "context",
-      elements: [{ type: "mrkdwn", text: `Resolved by <@${clickerId}>` }]
-    }
+      elements: [{ type: "mrkdwn", text: `Resolved by <@${clickerId}>` }],
+    },
   ];
+
+  // ==========================================
+  // HANDLE FEEDBACK SUBMISSION
+  // ==========================================
+  app.view("feedback_modal", async ({ ack, body, view, client }) => {
+    ack();
+
+    const rating =
+      view.state.values.rating_block?.static_select?.selected_option?.value;
+    const comment = view.state.values.comment_block?.plain_text_input?.value;
+    const userId = body.user.id;
+    const userName = body.user.username;
+
+    // 📌 DO SOMETHING WITH THE FEEDBACK
+    // Pick one or combine:
+
+    // Option 1: Post to a private channel
+    await client.chat.postMessage({
+      channel: "C0B6TNB4BSB", // Your #feedback channel ID
+      text: `📝 New Feedback from <@${userId}>`,
+      blocks: [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `*Rating:* ${["❌", "👎", "😐", "👍", "⭐"][rating - 1]} (${rating}/5)\n*User:* <@${userId}>\n*Comment:* ${comment || "No comment"}`,
+          },
+        },
+      ],
+    });
+
+    // Option 2: Save to database (replace with your DB)
+    // await db.feedback.insert({ userId, userName, rating, comment, timestamp: new Date() });
+
+    // Option 3: Send to external service (Webhook, Google Sheets, etc.)
+    // await fetch("YOUR_WEBHOOK_URL", { method: "POST", body: JSON.stringify({ userId, rating, comment }) });
+
+    // Send confirmation to user
+    await client.chat.postMessage({
+      channel: userId,
+      text: "✅ Thanks for the feedback! It helps us improve.",
+    });
+  });
 
   await respond({
     blocks: freshBlocks,
-    replace_original: true
+    replace_original: true,
+  });
+});
+
+// ==========================================
+// HANDLE FEEDBACK SUBMISSION
+// ==========================================
+app.view("feedback_modal", async ({ ack, body, view, client }) => {
+  ack();
+
+  const rating = view.state.values.rating_block?.rating_select?.selected_option?.value;
+  const comment = view.state.values.comment_block?.comment_input?.value;
+  const userId = body.user.id;
+  const userName = body.user.username;
+
+  // 📌 DO SOMETHING WITH THE FEEDBACK
+  // Pick one or combine:
+
+  // Option 1: Post to a private channel
+  await client.chat.postMessage({
+    channel: "C0B6TNB4BSB", // Your #feedback channel ID
+    text: `📝 New Feedback from <@${userId}>`,
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*Rating:* ${["❌", "👎", "😐", "👍", "⭐"][rating - 1]} (${rating}/5)\n*User:* <@${userId}>\n*Comment:* ${comment || "No comment"}`,
+        },
+      },
+    ],
+  });
+
+  // Option 2: Save to database (replace with your DB)
+  // await db.feedback.insert({ userId, userName, rating, comment, timestamp: new Date() });
+
+  // Option 3: Send to external service (Webhook, Google Sheets, etc.)
+  // await fetch("YOUR_WEBHOOK_URL", { method: "POST", body: JSON.stringify({ userId, rating, comment }) });
+
+  // Send confirmation to user
+  await client.chat.postMessage({
+    channel: userId,
+    text: "✅ Thanks for the feedback! It helps us improve.",
   });
 });
 
