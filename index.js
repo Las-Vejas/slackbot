@@ -1214,6 +1214,7 @@ app.action(/^trivia_ans_\d+$/, async ({ ack, action, body, respond }) => {
       elements: [{ type: "mrkdwn", text: `Resolved by <@${clickerId}>` }],
     },
   ];
+});
 
 // ==========================================
 // HANDLE FEEDBACK SUBMISSION
