@@ -868,7 +868,6 @@ app.command("/vjs", async ({ command, ack, respond, body, client }) => {
     // ==========================================
 
     case "trivia": {
-      // 1. Intercept the points sub-command
       if (param.trim().toLowerCase() === "points") {
         const scoreEntries = Object.entries(triviaScores);
 
@@ -879,10 +878,8 @@ app.command("/vjs", async ({ command, ack, respond, body, client }) => {
           });
         }
 
-        // Sort users highest score to lowest
         const sortedScores = scoreEntries.sort((a, b) => b[1] - a[1]);
 
-        // Map data to a neat, numbered list string with medals
         const leaderboardText = sortedScores
           .map(([userId, points], index) => {
             const medal =
@@ -917,7 +914,6 @@ app.command("/vjs", async ({ command, ack, respond, body, client }) => {
         });
       }
 
-      // 2. Your existing random trivia generator code follows naturally
       try {
         const response = await axios.get(
           "https://opentdb.com/api.php?amount=1&type=multiple",
@@ -983,56 +979,76 @@ app.command("/vjs", async ({ command, ack, respond, body, client }) => {
     // ==========================================
     // FEEDBACK
     // ==========================================
+
     case "feedback": {
-  try {
-    await client.views.open({
-      trigger_id: body.trigger_id,
-      view: {
-        type: "modal",
-        callback_id: "feedback_modal",
-        title: { type: "plain_text", text: "Bot Feedback" },
-        submit: { type: "plain_text", text: "Send" },
-        blocks: [
-          {
-            type: "input",
-            block_id: "rating_block",
-            label: { type: "plain_text", text: "How helpful was this bot?" },
-            element: {
-              type: "static_select",
-              action_id: "rating_select", // ✅ ADD THIS
-              options: [
-                { text: { type: "plain_text", text: "⭐ Great" }, value: "5" },
-                { text: { type: "plain_text", text: "👍 Good" }, value: "4" },
-                { text: { type: "plain_text", text: "😐 OK" }, value: "3" },
-                { text: { type: "plain_text", text: "👎 Bad" }, value: "2" },
-                { text: { type: "plain_text", text: "❌ Terrible" }, value: "1" },
-              ],
-            },
+      try {
+        await client.views.open({
+          trigger_id: body.trigger_id,
+          view: {
+            type: "modal",
+            callback_id: "feedback_modal",
+            title: { type: "plain_text", text: "Bot Feedback" },
+            submit: { type: "plain_text", text: "Send" },
+            blocks: [
+              {
+                type: "input",
+                block_id: "rating_block",
+                label: {
+                  type: "plain_text",
+                  text: "How helpful was this bot?",
+                },
+                element: {
+                  type: "static_select",
+                  action_id: "rating_select",
+                  options: [
+                    {
+                      text: { type: "plain_text", text: "⭐ Great" },
+                      value: "5",
+                    },
+                    {
+                      text: { type: "plain_text", text: "👍 Good" },
+                      value: "4",
+                    },
+                    { text: { type: "plain_text", text: "😐 OK" }, value: "3" },
+                    {
+                      text: { type: "plain_text", text: "👎 Bad" },
+                      value: "2",
+                    },
+                    {
+                      text: { type: "plain_text", text: "❌ Terrible" },
+                      value: "1",
+                    },
+                  ],
+                },
+              },
+              {
+                type: "input",
+                block_id: "comment_block",
+                label: { type: "plain_text", text: "Any comments?" },
+                element: {
+                  type: "plain_text_input",
+                  action_id: "comment_input",
+                  multiline: true,
+                  placeholder: {
+                    type: "plain_text",
+                    text: "Tell me what you think...",
+                  },
+                },
+                optional: true,
+              },
+            ],
           },
-          {
-            type: "input",
-            block_id: "comment_block",
-            label: { type: "plain_text", text: "Any comments?" },
-            element: {
-              type: "plain_text_input",
-              action_id: "comment_input", // ✅ ADD THIS TOO
-              multiline: true,
-              placeholder: { type: "plain_text", text: "Tell me what you think..." },
-            },
-            optional: true,
-          },
-        ],
-      },
-    });
-  } catch (error) {
-    console.error("[FEEDBACK ERROR]", error);
-  }
-  break;
-}
+        });
+      } catch (error) {
+        console.error("[FEEDBACK ERROR]", error);
+      }
+      break;
+    }
 
     // ==========================================
     // HELP & FALLBACK
     // ==========================================
+
     case "help":
     case "":
     case undefined: {
@@ -1111,7 +1127,6 @@ app.command("/vjs", async ({ command, ack, respond, body, client }) => {
     }
   }
 });
-// #endregion
 
 app.action(/^poll_vote_\d+$/, async ({ ack, action, body, respond }) => {
   await ack();
@@ -1131,9 +1146,7 @@ app.action(/^poll_vote_\d+$/, async ({ ack, action, body, respond }) => {
 
   const votersText = contextBlock.elements[0].text;
 
-  // 2. Check if the user's ID is already stored in the text string
   if (votersText.includes(userId)) {
-    // Send a private message to the user telling them they can't vote again
     return await respond({
       text: "⚠️ You have already cast your vote in this poll!",
       response_type: "ephemeral",
@@ -1141,10 +1154,8 @@ app.action(/^poll_vote_\d+$/, async ({ ack, action, body, respond }) => {
     });
   }
 
-  // 3. Update the voter tracking list text
   contextBlock.elements[0].text = `${votersText} <@${userId}>`;
 
-  // 4. Increment the target button's vote counter ticker
   const actionBlock = originalBlocks.find((block) => block.type === "actions");
   if (actionBlock) {
     actionBlock.elements.forEach((button) => {
@@ -1159,7 +1170,6 @@ app.action(/^poll_vote_\d+$/, async ({ ack, action, body, respond }) => {
     });
   }
 
-  // 5. Update the live poll interface block array
   await respond({
     blocks: originalBlocks,
     replace_original: true,
@@ -1181,10 +1191,8 @@ app.action(/^trivia_ans_\d+$/, async ({ ack, action, body, respond }) => {
     });
   }
 
-  // 1. Increment value in local memory
   triviaScores[clickerId] = (triviaScores[clickerId] || 0) + 1;
 
-  // 2. PERSISTENCE: Write the updated object directly to disk
   try {
     fs.writeFileSync(
       "./trivia_scores.json",
@@ -1219,20 +1227,18 @@ app.action(/^trivia_ans_\d+$/, async ({ ack, action, body, respond }) => {
 // ==========================================
 // HANDLE FEEDBACK SUBMISSION
 // ==========================================
+
 app.view("feedback_modal", async ({ ack, body, view, client }) => {
   ack();
 
-  const rating = view.state.values.rating_block?.rating_select?.selected_option?.value;
+  const rating =
+    view.state.values.rating_block?.rating_select?.selected_option?.value;
   const comment = view.state.values.comment_block?.comment_input?.value;
   const userId = body.user.id;
   const userName = body.user.username;
 
-  // 📌 DO SOMETHING WITH THE FEEDBACK
-  // Pick one or combine:
-
-  // Option 1: Post to a private channel
   await client.chat.postMessage({
-    channel: "C0B6TNB4BSB", // Your #feedback channel ID
+    channel: "C0B6TNB4BSB",
     text: `📝 New Feedback from <@${userId}>`,
     blocks: [
       {
@@ -1245,13 +1251,6 @@ app.view("feedback_modal", async ({ ack, body, view, client }) => {
     ],
   });
 
-  // Option 2: Save to database (replace with your DB)
-  // await db.feedback.insert({ userId, userName, rating, comment, timestamp: new Date() });
-
-  // Option 3: Send to external service (Webhook, Google Sheets, etc.)
-  // await fetch("YOUR_WEBHOOK_URL", { method: "POST", body: JSON.stringify({ userId, rating, comment }) });
-
-  // Send confirmation to user
   await client.chat.postMessage({
     channel: userId,
     text: "✅ Thanks for the feedback! It helps us improve.",
