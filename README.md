@@ -1,6 +1,6 @@
 # `/vjs` - the best app on slack
 
-## **Featuring an extensive list of features like: **
+## Featuring an extensive list of features like:
 - Trivia!
 - QR code generation
 - Email address checking
